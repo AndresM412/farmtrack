@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "1056152050367",
+    "project_id": "farmtrack-ebd3b",
+    "storage_bucket": "farmtrack-ebd3b.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:1056152050367:android:f252d21de7f8e5574e840a",
+        "android_client_info": {
+          "package_name": "com.example.farmtrack"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAVxVO_WnV5yaXojpG2_ltny_1ICbk2IFY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
