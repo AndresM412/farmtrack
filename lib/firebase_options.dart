@@ -83,4 +83,5 @@ class DefaultFirebaseOptions {
     authDomain: 'farmtrack-ebd3b.firebaseapp.com',
     storageBucket: 'farmtrack-ebd3b.firebasestorage.app',
   );
+
 }
