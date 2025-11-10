@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
-import '../services/auth_service.dart';
-
-final _authService = AuthService();
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 
 class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
@@ -13,8 +12,9 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   final _formKey = GlobalKey<FormState>();
   bool _acceptTerms = false;
+  bool _isLoading = false;
 
-  // Controladores para capturar texto
+  // Controladores
   final _farmNameController = TextEditingController();
   final _fullNameController = TextEditingController();
   final _emailController = TextEditingController();
@@ -29,6 +29,87 @@ class _RegisterScreenState extends State<RegisterScreen> {
     _passwordController.dispose();
     _confirmPasswordController.dispose();
     super.dispose();
+  }
+
+  Future<void> _registerUser() async {
+    // Validación
+    if (!_formKey.currentState!.validate() || !_acceptTerms) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Por favor completa todos los campos y acepta los términos."),
+        ),
+      );
+      return;
+    }
+
+    setState(() => _isLoading = true);
+
+    final email = _emailController.text.trim();
+    final password = _passwordController.text.trim();
+    final fullName = _fullNameController.text.trim();
+    final farmName = _farmNameController.text.trim();
+
+    try {
+      print("➡️ Iniciando createUserWithEmailAndPassword para $email");
+
+      final userCredential = await FirebaseAuth.instance
+          .createUserWithEmailAndPassword(email: email, password: password);
+
+      final user = userCredential.user;
+      if (user == null) throw Exception("UserCredential sin user");
+
+      final userId = user.uid;
+
+      print("✅ Usuario creado en Auth con UID: $userId");
+      print("➡️ Guardando documento inicial en Firestore...");
+
+      await FirebaseFirestore.instance.collection('users').doc(userId).set({
+        'email': email,
+        'nombreCompleto': fullName,
+        'nombreFinca': farmName,
+        'animalesTotales': 0,
+        'animalesGestacion': 0,
+        'animalesLactancia': 0,
+        'proximosPartos': 0,
+        'fechaRegistro': FieldValue.serverTimestamp(),
+      });
+
+      print("✅ Documento guardado en Firestore para $userId");
+
+      // ✅ Detener loader
+      if (mounted) setState(() => _isLoading = false);
+
+      // ✅ Notificación
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("✅ Cuenta creada con éxito")),
+        );
+      }
+
+      // ✅ Redirección al home
+      Future.delayed(const Duration(milliseconds: 800), () {
+        if (mounted) {
+          Navigator.pushReplacementNamed(context, '/home');
+        }
+      });
+
+    } on FirebaseAuthException catch (e) {
+      print("❌ FirebaseAuthException: ${e.code} - ${e.message}");
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text(e.message ?? "Error de autenticación")),
+        );
+      }
+    } catch (e) {
+      print("❌ Error general en registro: $e");
+      if (mounted) {
+        setState(() => _isLoading = false);
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Error al registrar usuario: $e")),
+        );
+      }
+    }
   }
 
   @override
@@ -71,6 +152,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       value!.isEmpty ? "Campo requerido" : null,
                 ),
                 const SizedBox(height: 15),
+
                 const Text("Nombre completo"),
                 const SizedBox(height: 5),
                 TextFormField(
@@ -80,6 +162,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       value!.isEmpty ? "Campo requerido" : null,
                 ),
                 const SizedBox(height: 15),
+
                 const Text("Correo electrónico"),
                 const SizedBox(height: 5),
                 TextFormField(
@@ -87,15 +170,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   decoration: _inputDecoration("ejemplo@correo.com"),
                   keyboardType: TextInputType.emailAddress,
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return "Campo requerido";
-                    } else if (!value.contains('@')) {
+                    if (value == null || value.isEmpty) return "Campo requerido";
+                    if (!value.contains('@') || !value.contains('.')) {
                       return "Correo inválido";
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: 15),
+
                 const Text("Contraseña"),
                 const SizedBox(height: 5),
                 TextFormField(
@@ -103,15 +186,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   obscureText: true,
                   decoration: _inputDecoration("Crea una contraseña"),
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return "Campo requerido";
-                    } else if (value.length < 6) {
-                      return "La contraseña debe tener al menos 6 caracteres";
-                    }
+                    if (value == null || value.isEmpty) return "Campo requerido";
+                    if (value.length < 6) return "Debe tener mínimo 6 caracteres";
                     return null;
                   },
                 ),
                 const SizedBox(height: 15),
+
                 const Text("Confirmar contraseña"),
                 const SizedBox(height: 5),
                 TextFormField(
@@ -119,15 +200,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   obscureText: true,
                   decoration: _inputDecoration("Confirma tu contraseña"),
                   validator: (value) {
-                    if (value == null || value.isEmpty) {
-                      return "Campo requerido";
-                    } else if (value != _passwordController.text) {
+                    if (value == null || value.isEmpty) return "Campo requerido";
+                    if (value != _passwordController.text) {
                       return "Las contraseñas no coinciden";
                     }
                     return null;
                   },
                 ),
                 const SizedBox(height: 20),
+
                 Row(
                   children: [
                     Checkbox(
@@ -137,26 +218,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         setState(() => _acceptTerms = value ?? false);
                       },
                     ),
-                    Expanded(
-                      child: RichText(
-                        text: const TextSpan(
-                          style: TextStyle(color: Colors.black87),
-                          children: [
-                            TextSpan(text: "Acepto los "),
-                            TextSpan(
-                              text: "términos y condiciones",
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                decoration: TextDecoration.underline,
-                              ),
-                            ),
-                          ],
-                        ),
+                    const Expanded(
+                      child: Text(
+                        "Acepto los términos y condiciones",
+                        style: TextStyle(color: Colors.black87),
                       ),
                     ),
                   ],
                 ),
+
                 const SizedBox(height: 25),
+
                 SizedBox(
                   width: double.infinity,
                   height: 55,
@@ -167,48 +239,29 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         borderRadius: BorderRadius.circular(12),
                       ),
                     ),
-                    onPressed: () async {
-                      if (_formKey.currentState!.validate() && _acceptTerms) {
-                        final email = _emailController.text.trim();
-                        final password = _passwordController.text.trim();
-
-                        final error = await _authService.registerUser(
-                          email: email,
-                          password: password,
-                        );
-
-                        if (error == null) {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text("Cuenta creada con éxito"),
+                    onPressed: _isLoading ? null : _registerUser,
+                    child: _isLoading
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(
+                              color: Colors.white,
+                              strokeWidth: 2,
                             ),
-                          );
-                          Navigator.pushNamed(context, '/login');
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            SnackBar(content: Text("Error: $error")),
-                          );
-                        }
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text(
-                                "Por favor completa todos los campos y acepta los términos."),
+                          )
+                        : const Text(
+                            "Crear cuenta",
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 16,
+                            ),
                           ),
-                        );
-                      }
-                    },
-                    child: const Text(
-                      "Crear cuenta",
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.bold,
-                        fontSize: 16,
-                      ),
-                    ),
                   ),
                 ),
+
                 const SizedBox(height: 20),
+
                 Center(
                   child: RichText(
                     text: TextSpan(
@@ -217,9 +270,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
                         const TextSpan(text: "¿Ya tienes una cuenta? "),
                         WidgetSpan(
                           child: GestureDetector(
-                            onTap: () {
-                              Navigator.pushNamed(context, '/login');
-                            },
+                            onTap: () =>
+                                Navigator.pushNamed(context, '/login'),
                             child: Text(
                               "Iniciar sesión",
                               style: TextStyle(
@@ -233,6 +285,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     ),
                   ),
                 ),
+
                 const SizedBox(height: 20),
               ],
             ),
