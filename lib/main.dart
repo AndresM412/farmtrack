@@ -6,15 +6,17 @@ import 'screens/register_screen.dart';
 import 'screens/home_screen.dart';
 import 'screens/animals_screen.dart';
 import 'screens/add_animal_screen.dart';
-import 'firebase_options.dart'; 
-
-// si usaste el asistente de configuración de Firebase
+import 'screens/alarms/alarms_screen.dart';
+import 'screens/alarms/add_alarm_screen.dart';
+import 'services/alarm_service.dart';
+import 'firebase_options.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
-    options: DefaultFirebaseOptions.currentPlatform, // si tienes firebase_options.dart
+    options: DefaultFirebaseOptions.currentPlatform,
   );
+  await AlarmService.initializeNotifications();
   runApp(const MyApp());
 }
 
@@ -32,12 +34,14 @@ class MyApp extends StatelessWidget {
       ),
       initialRoute: '/',
       routes: {
-        '/': (context) => const AuthWrapper(), // <- Aquí se maneja la sesión
+        '/': (context) => const AuthWrapper(),
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
         '/home': (context) => const HomeScreen(),
         '/animals': (context) => const AnimalsScreen(),
         '/add_animal_screen': (context) => const AddAnimalScreen(),
+        '/alarms': (context) => const AlarmsScreen(),
+        '/add_alarm_screen': (context) => const AddAlarmScreen(),
       },
     );
   }
@@ -57,9 +61,9 @@ class AuthWrapper extends StatelessWidget {
           );
         }
         if (snapshot.hasData) {
-          return const HomeScreen(); // si ya está logueado
+          return const HomeScreen();
         } else {
-          return const LoginScreen(); // si no lo está
+          return const LoginScreen();
         }
       },
     );
