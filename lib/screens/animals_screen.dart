@@ -3,6 +3,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/custom_bottom_nav.dart';
 import 'add_animal_screen.dart';
+import 'animal_detail_screen.dart'; // IMPORTAR LA NUEVA PANTALLA
 
 class AnimalsScreen extends StatefulWidget {
   const AnimalsScreen({super.key});
@@ -101,10 +102,13 @@ class _AnimalsScreenState extends State<AnimalsScreen> {
                 return ListView.builder(
                   itemCount: filteredDocs.length,
                   itemBuilder: (context, index) {
-                    final data = filteredDocs[index].data() as Map<String, dynamic>;
+                    final doc = filteredDocs[index];
+                    final data = doc.data() as Map<String, dynamic>;
+                    final animalId = doc.id; // OBTENER EL ID DEL DOCUMENTO
 
                     final nombre = data['nombre'] ?? 'Sin nombre';
                     final tipo = data['tipo'] ?? 'Desconocido';
+                    final raza = data['raza'] ?? '';
                     final imagenUrl = data['imagenUrl'];
 
                     return Card(
@@ -118,13 +122,13 @@ class _AnimalsScreenState extends State<AnimalsScreen> {
                             borderRadius: BorderRadius.circular(8),
                             child: imagenUrl != null
                                 ? Image.network(
-                                    imagenUrl,
-                                    fit: BoxFit.cover,
-                                  )
+                              imagenUrl,
+                              fit: BoxFit.cover,
+                            )
                                 : Container(
-                                    color: Colors.grey.shade300,
-                                    child: const Icon(Icons.pets, color: Colors.black54),
-                                  ),
+                              color: const Color(0xFF3FD411).withOpacity(0.1),
+                              child: const Icon(Icons.pets, color: Color(0xFF3FD411)),
+                            ),
                           ),
                         ),
                         title: Text(
@@ -134,10 +138,40 @@ class _AnimalsScreenState extends State<AnimalsScreen> {
                             fontSize: 16,
                           ),
                         ),
-                        subtitle: Text(tipo),
-                        trailing: const Icon(Icons.arrow_forward_ios, size: 18),
+                        subtitle: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text('$tipo ${raza.isNotEmpty ? '• $raza' : ''}'),
+                            if (data['fechaNacimiento'] != null)
+                              Text(
+                                'Nacimiento: ${data['fechaNacimiento']}',
+                                style: const TextStyle(fontSize: 12, color: Colors.grey),
+                              ),
+                          ],
+                        ),
+                        trailing: Container(
+                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                          decoration: BoxDecoration(
+                            color: _getStatusColor(data),
+                            borderRadius: BorderRadius.circular(6),
+                          ),
+                          child: Text(
+                            _getStatusText(data),
+                            style: const TextStyle(
+                              color: Colors.white,
+                              fontSize: 10,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                        ),
                         onTap: () {
-                          // TODO: Detalles de un animal
+                          // NAVEGAR A LA PANTALLA DE DETALLE
+                          Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AnimalDetailScreen(animalId: animalId),
+                            ),
+                          );
                         },
                       ),
                     );
@@ -151,7 +185,7 @@ class _AnimalsScreenState extends State<AnimalsScreen> {
 
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 70.0), // lo sube un poco
+        padding: const EdgeInsets.only(bottom: 70.0),
         child: Tooltip(
           message: 'Agregar animal',
           child: FloatingActionButton(
@@ -171,5 +205,31 @@ class _AnimalsScreenState extends State<AnimalsScreen> {
 
       bottomNavigationBar: const CustomBottomNav(currentIndex: 1),
     );
+  }
+
+  // FUNCIÓN PARA OBTENER COLOR DEL ESTADO
+  Color _getStatusColor(Map<String, dynamic> animal) {
+    if (animal['lactancia'] != null) {
+      return Colors.blue; // En lactancia
+    } else if (animal['parto'] != null) {
+      return Colors.purple; // En parto
+    } else if (animal['inseminacion'] != null) {
+      return Colors.orange; // Inseminada
+    } else {
+      return const Color(0xFF3FD411); // Normal
+    }
+  }
+
+  // FUNCIÓN PARA OBTENER TEXTO DEL ESTADO
+  String _getStatusText(Map<String, dynamic> animal) {
+    if (animal['lactancia'] != null) {
+      return 'LACTANCIA';
+    } else if (animal['parto'] != null) {
+      return 'PARTO';
+    } else if (animal['inseminacion'] != null) {
+      return 'INSEMINADA';
+    } else {
+      return 'NORMAL';
+    }
   }
 }

@@ -6,14 +6,21 @@ import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io' show File;
 
-class AddAnimalScreen extends StatefulWidget {
-  const AddAnimalScreen({super.key});
+class EditAnimalScreen extends StatefulWidget {
+  final String animalId;
+  final Map<String, dynamic> animalData;
+
+  const EditAnimalScreen({
+    super.key,
+    required this.animalId,
+    required this.animalData,
+  });
 
   @override
-  State<AddAnimalScreen> createState() => _AddAnimalScreenState();
+  State<EditAnimalScreen> createState() => _EditAnimalScreenState();
 }
 
-class _AddAnimalScreenState extends State<AddAnimalScreen> {
+class _EditAnimalScreenState extends State<EditAnimalScreen> {
   final _formKey = GlobalKey<FormState>();
   final TextEditingController _nombreController = TextEditingController();
   final TextEditingController _razaController = TextEditingController();
@@ -24,9 +31,30 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
 
   String _tipo = "Vaca";
   XFile? _selectedImage;
+  String? _currentImageUrl;
   bool _loading = false;
+  bool _imageChanged = false;
 
   final ImagePicker _picker = ImagePicker();
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAnimalData();
+  }
+
+  void _loadAnimalData() {
+    final animal = widget.animalData;
+
+    _nombreController.text = animal['nombre'] ?? '';
+    _tipo = animal['tipo'] ?? 'Vaca';
+    _razaController.text = animal['raza'] ?? '';
+    _fechaNacimientoController.text = animal['fechaNacimiento'] ?? '';
+    _inseminacionController.text = animal['inseminacion'] ?? '';
+    _partoController.text = animal['parto'] ?? '';
+    _lactanciaController.text = animal['lactancia'] ?? '';
+    _currentImageUrl = animal['imagenUrl'];
+  }
 
   Future<void> _pickImage() async {
     try {
@@ -34,6 +62,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
       if (picked != null) {
         setState(() {
           _selectedImage = picked;
+          _imageChanged = true;
         });
       }
     } catch (e) {
@@ -70,7 +99,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
     _lactanciaController.text = "${lactanciaDate.day}/${lactanciaDate.month}/${lactanciaDate.year}";
   }
 
-  Future<void> _saveAnimal() async {
+  Future<void> _updateAnimal() async {
     if (!_formKey.currentState!.validate()) {
       _showError('Por favor completa todos los campos obligatorios');
       return;
@@ -85,23 +114,26 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
     setState(() => _loading = true);
 
     try {
-      String? imageUrl;
+      String? imageUrl = _currentImageUrl;
 
-      if (_selectedImage != null) {
+      // Si se seleccionó una nueva imagen, subirla
+      if (_imageChanged && _selectedImage != null) {
         try {
           imageUrl = await _uploadImage(user.uid);
-          debugPrint('Imagen subida correctamente: $imageUrl');
+          debugPrint('Nueva imagen subida correctamente: $imageUrl');
         } catch (e) {
-          debugPrint('Error subiendo imagen, pero continuando sin ella: $e');
-          imageUrl = null;
+          debugPrint('Error subiendo nueva imagen: $e');
+          // Mantener la imagen anterior si falla la subida
         }
       }
 
+      // Actualizar en Firestore
       await FirebaseFirestore.instance
           .collection('users')
           .doc(user.uid)
           .collection('animales')
-          .add({
+          .doc(widget.animalId)
+          .update({
         'nombre': _nombreController.text.trim(),
         'tipo': _tipo,
         'raza': _razaController.text.trim(),
@@ -110,11 +142,10 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
         'parto': _partoController.text.isEmpty ? null : _partoController.text,
         'lactancia': _lactanciaController.text.isEmpty ? null : _lactanciaController.text,
         'imagenUrl': imageUrl,
-        'fechaRegistro': FieldValue.serverTimestamp(),
-        'userId': user.uid,
+        'fechaActualizacion': FieldValue.serverTimestamp(),
       });
 
-      _showSuccess('Animal guardado exitosamente${imageUrl == null ? ' (sin imagen)' : ''}');
+      _showSuccess('Animal actualizado exitosamente');
 
       await Future.delayed(const Duration(milliseconds: 1500));
 
@@ -123,7 +154,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
       }
 
     } catch (e) {
-      _showError('Error al guardar animal: $e');
+      _showError('Error al actualizar animal: $e');
     } finally {
       if (mounted) {
         setState(() => _loading = false);
@@ -187,16 +218,11 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
     }
   }
 
-  void _clearForm() {
-    _nombreController.clear();
-    _razaController.clear();
-    _fechaNacimientoController.clear();
-    _inseminacionController.clear();
-    _partoController.clear();
-    _lactanciaController.clear();
+  void _removeImage() {
     setState(() {
       _selectedImage = null;
-      _tipo = "Vaca";
+      _currentImageUrl = null;
+      _imageChanged = true;
     });
   }
 
@@ -206,7 +232,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
       backgroundColor: const Color(0xFFF6F8F6),
       appBar: AppBar(
         title: const Text(
-          "Nuevo Animal",
+          "Editar Animal",
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: Colors.black,
@@ -216,13 +242,6 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.clear_all),
-            onPressed: _clearForm,
-            tooltip: 'Limpiar formulario',
-          ),
-        ],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -268,6 +287,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
               _buildIconTextField("Raza", Icons.grass, _razaController, false),
               const SizedBox(height: 20),
 
+              // Sección de imagen
               GestureDetector(
                 onTap: _loading ? null : _pickImage,
                 child: Container(
@@ -280,14 +300,50 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
                   child: Column(
                     children: [
                       if (_selectedImage != null)
-                        kIsWeb
-                            ? Image.network(_selectedImage!.path, height: 150, fit: BoxFit.cover)
-                            : Image.file(File(_selectedImage!.path), height: 150, fit: BoxFit.cover)
+                        Stack(
+                          children: [
+                            kIsWeb
+                                ? Image.network(_selectedImage!.path, height: 150, fit: BoxFit.cover)
+                                : Image.file(File(_selectedImage!.path), height: 150, fit: BoxFit.cover),
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: CircleAvatar(
+                                backgroundColor: Colors.red,
+                                radius: 14,
+                                child: IconButton(
+                                  icon: const Icon(Icons.close, size: 14, color: Colors.white),
+                                  onPressed: _removeImage,
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
+                      else if (_currentImageUrl != null)
+                        Stack(
+                          children: [
+                            Image.network(_currentImageUrl!, height: 150, fit: BoxFit.cover),
+                            Positioned(
+                              top: 8,
+                              right: 8,
+                              child: CircleAvatar(
+                                backgroundColor: Colors.red,
+                                radius: 14,
+                                child: IconButton(
+                                  icon: const Icon(Icons.close, size: 14, color: Colors.white),
+                                  onPressed: _removeImage,
+                                ),
+                              ),
+                            ),
+                          ],
+                        )
                       else
                         const Icon(Icons.image_outlined, size: 60, color: Color(0xFF3FD411)),
                       const SizedBox(height: 8),
                       Text(
-                        _selectedImage != null ? "Imagen seleccionada" : "Subir imagen",
+                        _selectedImage != null || _currentImageUrl != null
+                            ? "Imagen actual"
+                            : "Subir imagen",
                         style: TextStyle(
                           fontWeight: FontWeight.bold,
                           color: _loading ? Colors.grey : Colors.black,
@@ -295,8 +351,8 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
                       ),
                       if (_selectedImage != null)
                         const Text(
-                          "(Si falla la subida, se guardara sin imagen)",
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
+                          "Nueva imagen seleccionada",
+                          style: TextStyle(fontSize: 12, color: Color(0xFF3FD411)),
                         ),
                     ],
                   ),
@@ -347,7 +403,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
                         padding: const EdgeInsets.symmetric(vertical: 14),
                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                       ),
-                      onPressed: _loading ? null : _saveAnimal,
+                      onPressed: _loading ? null : _updateAnimal,
                       child: _loading
                           ? const SizedBox(
                         height: 20,
@@ -358,7 +414,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
                         ),
                       )
                           : const Text(
-                        "Guardar Animal",
+                        "Actualizar Animal",
                         style: TextStyle(
                             color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
                       ),

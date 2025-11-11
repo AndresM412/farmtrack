@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import '../screens/home_screen.dart';
 import '../screens/animals_screen.dart';
+import '../screens/alarms/alarms_screen.dart';
 
 class CustomBottomNav extends StatelessWidget {
   final int currentIndex;
@@ -11,7 +12,7 @@ class CustomBottomNav extends StatelessWidget {
   });
 
   void _onItemTapped(BuildContext context, int index) {
-    if (index == currentIndex) return; // evitar recargar misma pantalla
+    if (index == currentIndex) return;
 
     switch (index) {
       case 0:
@@ -27,13 +28,24 @@ class CustomBottomNav extends StatelessWidget {
         );
         break;
       case 2:
-        // TODO: AlarmasScreen()
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const AlarmsScreen()),
+        );
         break;
       case 3:
-        // TODO: ReportesScreen()
+      // TODO: ReportesScreen()
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
         break;
       case 4:
-        // TODO: AjustesScreen()
+      // TODO: AjustesScreen()
+        Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (_) => const HomeScreen()),
+        );
         break;
     }
   }
@@ -65,8 +77,6 @@ class CustomBottomNav extends StatelessWidget {
 
     return MouseRegion(
       cursor: SystemMouseCursors.click,
-      onEnter: (_) {},
-      onExit: (_) {},
       child: StatefulBuilder(
         builder: (context, setState) {
           bool isHovering = false;
@@ -83,8 +93,8 @@ class CustomBottomNav extends StatelessWidget {
                   color: active
                       ? const Color(0xFF3FD411).withOpacity(0.15)
                       : isHovering
-                          ? Colors.grey.withOpacity(0.1)
-                          : Colors.transparent,
+                      ? Colors.grey.withOpacity(0.1)
+                      : Colors.transparent,
                   borderRadius: BorderRadius.circular(8),
                 ),
                 child: Column(
@@ -96,7 +106,7 @@ class CustomBottomNav extends StatelessWidget {
                       child: Icon(
                         icon,
                         color:
-                            active ? const Color(0xFF3FD411) : Colors.grey[700],
+                        active ? const Color(0xFF3FD411) : Colors.grey[700],
                       ),
                     ),
                     const SizedBox(height: 2),
@@ -106,8 +116,8 @@ class CustomBottomNav extends StatelessWidget {
                         color: active
                             ? const Color(0xFF3FD411)
                             : isHovering
-                                ? Colors.black
-                                : Colors.grey[700],
+                            ? Colors.black
+                            : Colors.grey[700],
                         fontSize: 12,
                       ),
                       child: Text(label),
