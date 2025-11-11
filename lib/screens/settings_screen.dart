@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../widgets/custom_bottom_nav.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -105,6 +106,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           );
         },
       ),
+      bottomNavigationBar: const CustomBottomNav(currentIndex: 4),
     );
   }
 }

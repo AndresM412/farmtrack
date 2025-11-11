@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import '../widgets/custom_bottom_nav.dart';
 
 // Modelo simple para contener los datos del reporte
 class ReportData {
@@ -60,13 +61,6 @@ class _ReportsScreenState extends State<ReportsScreen> {
       query = query.where('tipo', isEqualTo: _animalTypeFilter);
     }
 
-    // Aplicar filtro de rango de fechas (usando fecha de registro como ejemplo)
-    if (_dateRangeFilter != null) {
-      query = query
-          .where('fechaRegistro', isGreaterThanOrEqualTo: _dateRangeFilter!.start)
-          .where('fechaRegistro', isLessThanOrEqualTo: _dateRangeFilter!.end);
-    }
-
     final snapshot = await query.get();
 
     if (snapshot.docs.isEmpty) {
@@ -84,6 +78,17 @@ class _ReportsScreenState extends State<ReportsScreen> {
 
     for (var doc in snapshot.docs) {
       final data = doc.data() as Map<String, dynamic>;
+
+      // Filtrar por rango de fechas en código (Dart)
+      if (_dateRangeFilter != null) {
+        if (data['fechaRegistro'] is Timestamp) {
+          final fechaRegistro = (data['fechaRegistro'] as Timestamp).toDate();
+          if (fechaRegistro.isBefore(_dateRangeFilter!.start) || 
+              fechaRegistro.isAfter(_dateRangeFilter!.end)) {
+            continue; // Saltar este documento si no está en el rango
+          }
+        }
+      }
 
       // Asumiendo que tienes un campo 'estadoReproductivo'
       switch (data['estadoReproductivo']) {
@@ -226,6 +231,7 @@ class _ReportsScreenState extends State<ReportsScreen> {
           ),
         ],
       ),
+      bottomNavigationBar: const CustomBottomNav(currentIndex: 3),
     );
   }
 
