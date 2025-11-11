@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:flutter/foundation.dart' show kIsWeb;
 import 'dart:io' show File;
+import 'package:intl/intl.dart';
 
 class AddAnimalScreen extends StatefulWidget {
   const AddAnimalScreen({super.key});
@@ -22,11 +23,20 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
   final TextEditingController _partoController = TextEditingController();
   final TextEditingController _lactanciaController = TextEditingController();
 
+  // State variables for dates
+  DateTime? _fechaNacimiento;
+  DateTime? _inseminacion;
+  DateTime? _parto;
+  DateTime? _lactancia;
+
   String _tipo = "Vaca";
+  String _estadoReproductivo = "Seca";
+  String _estadoSalud = "Saludable";
   XFile? _selectedImage;
   bool _loading = false;
 
   final ImagePicker _picker = ImagePicker();
+  final DateFormat _dateFormat = DateFormat('dd/MM/yyyy');
 
   Future<void> _pickImage() async {
     try {
@@ -41,7 +51,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
     }
   }
 
-  Future<void> _pickDate(TextEditingController controller, String fieldName) async {
+  Future<void> _pickDate(TextEditingController controller, Function(DateTime) onDateSelected) async {
     try {
       final picked = await showDatePicker(
         context: context,
@@ -50,12 +60,8 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
         lastDate: DateTime(2100),
       );
       if (picked != null) {
-        final formattedDate = "${picked.day}/${picked.month}/${picked.year}";
-        controller.text = formattedDate;
-
-        if (fieldName == 'inseminacion') {
-          _calculateEstimatedDates(picked);
-        }
+        controller.text = _dateFormat.format(picked);
+        onDateSelected(picked);
       }
     } catch (e) {
       _showError('Error al seleccionar fecha: $e');
@@ -63,11 +69,13 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
   }
 
   void _calculateEstimatedDates(DateTime inseminacionDate) {
-    final partoDate = inseminacionDate.add(const Duration(days: 283));
-    _partoController.text = "${partoDate.day}/${partoDate.month}/${partoDate.year}";
-
-    final lactanciaDate = partoDate.add(const Duration(days: 60));
-    _lactanciaController.text = "${lactanciaDate.day}/${lactanciaDate.month}/${lactanciaDate.year}";
+    setState(() {
+      _inseminacion = inseminacionDate;
+      _parto = inseminacionDate.add(const Duration(days: 283));
+      _partoController.text = _dateFormat.format(_parto!);
+      _lactancia = _parto!.add(const Duration(days: 60));
+      _lactanciaController.text = _dateFormat.format(_lactancia!);
+    });
   }
 
   Future<void> _saveAnimal() async {
@@ -90,7 +98,6 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
       if (_selectedImage != null) {
         try {
           imageUrl = await _uploadImage(user.uid);
-          debugPrint('Imagen subida correctamente: $imageUrl');
         } catch (e) {
           debugPrint('Error subiendo imagen, pero continuando sin ella: $e');
           imageUrl = null;
@@ -105,10 +112,12 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
         'nombre': _nombreController.text.trim(),
         'tipo': _tipo,
         'raza': _razaController.text.trim(),
-        'fechaNacimiento': _fechaNacimientoController.text,
-        'inseminacion': _inseminacionController.text.isEmpty ? null : _inseminacionController.text,
-        'parto': _partoController.text.isEmpty ? null : _partoController.text,
-        'lactancia': _lactanciaController.text.isEmpty ? null : _lactanciaController.text,
+        'estadoReproductivo': _estadoReproductivo,
+        'estadoSalud': _estadoSalud,
+        'fechaNacimiento': _fechaNacimiento != null ? Timestamp.fromDate(_fechaNacimiento!) : null,
+        'fechaInseminacion': _inseminacion != null ? Timestamp.fromDate(_inseminacion!) : null,
+        'fechaParto': _parto != null ? Timestamp.fromDate(_parto!) : null,
+        'fechaLactancia': _lactancia != null ? Timestamp.fromDate(_lactancia!) : null,
         'imagenUrl': imageUrl,
         'fechaRegistro': FieldValue.serverTimestamp(),
         'userId': user.uid,
@@ -140,23 +149,11 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
           .ref()
           .child('animal_images/$userId/${timestamp}_animal.jpg');
 
-      if (kIsWeb) {
-        final bytes = await _selectedImage!.readAsBytes();
-        final uploadTask = ref.putData(
-          bytes,
-          SettableMetadata(contentType: 'image/jpeg'),
-        );
-        final snapshot = await uploadTask;
-        return await snapshot.ref.getDownloadURL();
-      } else {
-        final file = File(_selectedImage!.path);
-        final uploadTask = ref.putFile(
-          file,
-          SettableMetadata(contentType: 'image/jpeg'),
-        );
-        final snapshot = await uploadTask;
-        return await snapshot.ref.getDownloadURL();
-      }
+      final bytes = await _selectedImage!.readAsBytes();
+      final uploadTask = ref.putData(bytes, SettableMetadata(contentType: 'image/jpeg'));
+      final snapshot = await uploadTask;
+      return await snapshot.ref.getDownloadURL();
+
     } catch (e) {
       debugPrint('Error en _uploadImage: $e');
       throw e;
@@ -166,11 +163,7 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
   void _showError(String message) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: Colors.red,
-          duration: const Duration(seconds: 4),
-        ),
+        SnackBar(content: Text(message), backgroundColor: Colors.red, duration: const Duration(seconds: 4)),
       );
     }
   }
@@ -178,16 +171,13 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
   void _showSuccess(String message) {
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(message),
-          backgroundColor: Colors.green,
-          duration: const Duration(seconds: 2),
-        ),
+        SnackBar(content: Text(message), backgroundColor: Colors.green, duration: const Duration(seconds: 2)),
       );
     }
   }
 
   void _clearForm() {
+    _formKey.currentState?.reset();
     _nombreController.clear();
     _razaController.clear();
     _fechaNacimientoController.clear();
@@ -196,7 +186,13 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
     _lactanciaController.clear();
     setState(() {
       _selectedImage = null;
+      _fechaNacimiento = null;
+      _inseminacion = null;
+      _parto = null;
+      _lactancia = null;
       _tipo = "Vaca";
+      _estadoReproductivo = "Seca";
+      _estadoSalud = "Saludable";
     });
   }
 
@@ -205,24 +201,12 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8F6),
       appBar: AppBar(
-        title: const Text(
-          "Nuevo Animal",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.black,
-          ),
-        ),
+        title: const Text("Nuevo Animal", style: TextStyle(fontWeight: FontWeight.bold, color: Colors.black)),
         backgroundColor: const Color(0xFFF6F8F6),
         elevation: 0,
         iconTheme: const IconThemeData(color: Colors.black),
         centerTitle: true,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.clear_all),
-            onPressed: _clearForm,
-            tooltip: 'Limpiar formulario',
-          ),
-        ],
+        actions: [IconButton(icon: const Icon(Icons.clear_all), onPressed: _clearForm, tooltip: 'Limpiar formulario')],
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -234,134 +218,63 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
               _buildIconTextField("Identificador del animal", Icons.badge_outlined, _nombreController, true),
               const SizedBox(height: 12),
 
-              Row(
-                children: [
-                  Container(
-                    decoration: const BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: Color(0xFF3FD411),
-                    ),
-                    padding: const EdgeInsets.all(8),
-                    child: const Icon(Icons.pets, color: Colors.white, size: 22),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: DropdownButtonFormField<String>(
-                      value: _tipo,
-                      decoration: _inputDecoration("Especie"),
-                      items: const [
-                        DropdownMenuItem(value: "Vaca", child: Text("Vaca")),
-                        DropdownMenuItem(value: "Cerda", child: Text("Cerda")),
-                        DropdownMenuItem(value: "Cabra", child: Text("Cabra")),
-                        DropdownMenuItem(value: "Oveja", child: Text("Oveja")),
-                      ],
-                      onChanged: _loading ? null : (val) => setState(() => _tipo = val!),
-                    ),
-                  ),
-                ],
-              ),
+              _buildDropdown("Especie", Icons.pets, _tipo, ["Vaca", "Cerda", "Cabra", "Oveja"], (val) => setState(() => _tipo = val!)),
               const SizedBox(height: 12),
 
-              _buildIconDateField("Fecha de nacimiento", Icons.cake_outlined, _fechaNacimientoController, true),
+              _buildIconDateField("Fecha de nacimiento", Icons.cake_outlined, _fechaNacimientoController, true, (date) => setState(() => _fechaNacimiento = date)),
               const SizedBox(height: 12),
 
               _buildIconTextField("Raza", Icons.grass, _razaController, false),
+              const SizedBox(height: 12),
+
+              _buildDropdown("Estado Reproductivo", Icons.sync_alt, _estadoReproductivo, ["Gestación", "Lactancia", "Seca"], (val) => setState(() => _estadoReproductivo = val!)),
+              const SizedBox(height: 12),
+
+              _buildDropdown("Estado de Salud", Icons.favorite_border, _estadoSalud, ["Saludable", "Enfermo"], (val) => setState(() => _estadoSalud = val!)),
               const SizedBox(height: 20),
 
               GestureDetector(
                 onTap: _loading ? null : _pickImage,
                 child: Container(
                   padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    border: Border.all(color: const Color(0xFF3FD411).withOpacity(0.5)),
-                    borderRadius: BorderRadius.circular(12),
-                    color: Colors.white,
-                  ),
+                  decoration: BoxDecoration(border: Border.all(color: const Color(0xFF3FD411).withOpacity(0.5)), borderRadius: BorderRadius.circular(12), color: Colors.white),
                   child: Column(
                     children: [
                       if (_selectedImage != null)
-                        kIsWeb
-                            ? Image.network(_selectedImage!.path, height: 150, fit: BoxFit.cover)
-                            : Image.file(File(_selectedImage!.path), height: 150, fit: BoxFit.cover)
+                        kIsWeb ? Image.network(_selectedImage!.path, height: 150, fit: BoxFit.cover) : Image.file(File(_selectedImage!.path), height: 150, fit: BoxFit.cover)
                       else
                         const Icon(Icons.image_outlined, size: 60, color: Color(0xFF3FD411)),
                       const SizedBox(height: 8),
-                      Text(
-                        _selectedImage != null ? "Imagen seleccionada" : "Subir imagen",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: _loading ? Colors.grey : Colors.black,
-                        ),
-                      ),
-                      if (_selectedImage != null)
-                        const Text(
-                          "(Si falla la subida, se guardara sin imagen)",
-                          style: TextStyle(fontSize: 12, color: Colors.grey),
-                        ),
+                      Text(_selectedImage != null ? "Imagen seleccionada" : "Subir imagen", style: TextStyle(fontWeight: FontWeight.bold, color: _loading ? Colors.grey : Colors.black)),
                     ],
                   ),
                 ),
               ),
               const SizedBox(height: 30),
 
-              const Text(
-                "Fechas Reproductivas (Opcionales)",
-                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
-              ),
+              const Text("Fechas Reproductivas (Opcionales)", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)),
               const SizedBox(height: 8),
-              const Text(
-                "Al ingresar la fecha de inseminacion, se calcularan automaticamente las demas fechas",
-                style: TextStyle(fontSize: 12, color: Colors.grey),
-              ),
+              const Text("Al ingresar la fecha de inseminacion, se calcularan automaticamente las demas fechas", style: TextStyle(fontSize: 12, color: Colors.grey)),
               const SizedBox(height: 12),
 
-              _buildIconDateField("Inseminacion", Icons.biotech_outlined, _inseminacionController, false),
+              _buildIconDateField("Inseminacion", Icons.biotech_outlined, _inseminacionController, false, (date) => _calculateEstimatedDates(date)),
               const SizedBox(height: 12),
-              _buildIconDateField("Parto estimado", Icons.pregnant_woman_outlined, _partoController, false),
-              const SizedBox(height: 12),
-              _buildIconDateField("Lactancia estimada", Icons.local_drink_outlined, _lactanciaController, false),
 
+              _buildIconDateField("Parto estimado", Icons.pregnant_woman_outlined, _partoController, false, (date) => setState(() => _parto = date)),
+              const SizedBox(height: 12),
+
+              _buildIconDateField("Lactancia estimada", Icons.local_drink_outlined, _lactanciaController, false, (date) => setState(() => _lactancia = date)),
               const SizedBox(height: 30),
 
               Row(
                 children: [
-                  Expanded(
-                    child: OutlinedButton(
-                      style: OutlinedButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                        side: const BorderSide(color: Colors.grey),
-                      ),
-                      onPressed: _loading ? null : () => Navigator.pop(context),
-                      child: const Text(
-                        "Cancelar",
-                        style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold),
-                      ),
-                    ),
-                  ),
+                  Expanded(child: OutlinedButton(style: OutlinedButton.styleFrom(padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)), side: const BorderSide(color: Colors.grey)), onPressed: _loading ? null : () => Navigator.pop(context), child: const Text("Cancelar", style: TextStyle(color: Colors.grey, fontWeight: FontWeight.bold)))),
                   const SizedBox(width: 12),
                   Expanded(
                     child: ElevatedButton(
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: _loading ? Colors.grey : const Color(0xFF3FD411),
-                        padding: const EdgeInsets.symmetric(vertical: 14),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-                      ),
+                      style: ElevatedButton.styleFrom(backgroundColor: _loading ? Colors.grey : const Color(0xFF3FD411), padding: const EdgeInsets.symmetric(vertical: 14), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12))),
                       onPressed: _loading ? null : _saveAnimal,
-                      child: _loading
-                          ? const SizedBox(
-                        height: 20,
-                        width: 20,
-                        child: CircularProgressIndicator(
-                          color: Colors.white,
-                          strokeWidth: 2,
-                        ),
-                      )
-                          : const Text(
-                        "Guardar Animal",
-                        style: TextStyle(
-                            color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16),
-                      ),
+                      child: _loading ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Text("Guardar Animal", style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
                     ),
                   ),
                 ],
@@ -373,73 +286,20 @@ class _AddAnimalScreenState extends State<AddAnimalScreen> {
     );
   }
 
-  Widget _buildIconTextField(String label, IconData icon, TextEditingController controller, bool isRequired) {
-    return Row(
-      children: [
-        Container(
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            color: Color(0xFF3FD411),
-          ),
-          padding: const EdgeInsets.all(8),
-          child: Icon(icon, color: Colors.white, size: 22),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: TextFormField(
-            controller: controller,
-            decoration: _inputDecoration(label),
-            validator: isRequired ? (v) => v!.isEmpty ? "Campo obligatorio" : null : null,
-          ),
-        ),
-      ],
-    );
+  Widget _buildDropdown(String label, IconData icon, String currentValue, List<String> items, ValueChanged<String?> onChanged) {
+    return Row(children: [Container(decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF3FD411)), padding: const EdgeInsets.all(8), child: Icon(icon, color: Colors.white, size: 22)), const SizedBox(width: 12), Expanded(child: DropdownButtonFormField<String>(value: currentValue, decoration: _inputDecoration(label), items: items.map((String value) => DropdownMenuItem<String>(value: value, child: Text(value))).toList(), onChanged: _loading ? null : onChanged))]);
   }
 
-  Widget _buildIconDateField(String label, IconData icon, TextEditingController controller, bool isRequired) {
-    return Row(
-      children: [
-        Container(
-          decoration: const BoxDecoration(
-            shape: BoxShape.circle,
-            color: Color(0xFF3FD411),
-          ),
-          padding: const EdgeInsets.all(8),
-          child: Icon(icon, color: Colors.white, size: 22),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          child: TextFormField(
-            controller: controller,
-            readOnly: true,
-            onTap: _loading ? null : () => _pickDate(controller, label.toLowerCase()),
-            decoration: _inputDecoration(label).copyWith(
-              suffixIcon: const Icon(Icons.calendar_today, color: Color(0xFF3FD411), size: 20),
-            ),
-            validator: isRequired ? (v) => v!.isEmpty ? "Campo obligatorio" : null : null,
-          ),
-        ),
-      ],
-    );
+  Widget _buildIconTextField(String label, IconData icon, TextEditingController controller, bool isRequired) {
+    return Row(children: [Container(decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF3FD411)), padding: const EdgeInsets.all(8), child: Icon(icon, color: Colors.white, size: 22)), const SizedBox(width: 12), Expanded(child: TextFormField(controller: controller, decoration: _inputDecoration(label), validator: isRequired ? (v) => v!.isEmpty ? "Campo obligatorio" : null : null))]);
+  }
+
+  Widget _buildIconDateField(String label, IconData icon, TextEditingController controller, bool isRequired, Function(DateTime) onDateSelected) {
+    return Row(children: [Container(decoration: const BoxDecoration(shape: BoxShape.circle, color: Color(0xFF3FD411)), padding: const EdgeInsets.all(8), child: Icon(icon, color: Colors.white, size: 22)), const SizedBox(width: 12), Expanded(child: TextFormField(controller: controller, readOnly: true, onTap: _loading ? null : () => _pickDate(controller, onDateSelected), decoration: _inputDecoration(label).copyWith(suffixIcon: const Icon(Icons.calendar_today, color: Color(0xFF3FD411), size: 20)), validator: isRequired ? (v) => v!.isEmpty ? "Campo obligatorio" : null : null))]);
   }
 
   InputDecoration _inputDecoration(String label) {
-    return InputDecoration(
-      labelText: label,
-      filled: true,
-      fillColor: Colors.white,
-      border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: const BorderSide(color: Color(0xFF3FD411)),
-      ),
-      enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(12),
-        borderSide: BorderSide(color: const Color(0xFF3FD411).withOpacity(0.4)),
-      ),
-      focusedBorder: const OutlineInputBorder(
-        borderSide: BorderSide(color: Color(0xFF3FD411), width: 1.5),
-      ),
-    );
+    return InputDecoration(labelText: label, filled: true, fillColor: Colors.white, border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFF3FD411))), enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide(color: const Color(0xFF3FD411).withOpacity(0.4))), focusedBorder: const OutlineInputBorder(borderSide: BorderSide(color: Color(0xFF3FD411), width: 1.5)));
   }
 
   @override

@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import '../screens/home_screen.dart';
 import '../screens/animals_screen.dart';
 import '../screens/alarms/alarms_screen.dart';
+import '../screens/reports_screen.dart';
+import '../screens/settings_screen.dart';
 
 class CustomBottomNav extends StatelessWidget {
   final int currentIndex;
@@ -34,17 +36,15 @@ class CustomBottomNav extends StatelessWidget {
         );
         break;
       case 3:
-      // TODO: ReportesScreen()
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
+          MaterialPageRoute(builder: (_) => const ReportsScreen()),
         );
         break;
       case 4:
-      // TODO: AjustesScreen()
         Navigator.pushReplacement(
           context,
-          MaterialPageRoute(builder: (_) => const HomeScreen()),
+          MaterialPageRoute(builder: (_) => const SettingsScreen()),
         );
         break;
     }
