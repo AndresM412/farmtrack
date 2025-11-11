@@ -46,7 +46,7 @@ class DefaultFirebaseOptions {
     messagingSenderId: '1056152050367',
     projectId: 'farmtrack-ebd3b',
     authDomain: 'farmtrack-ebd3b.firebaseapp.com',
-    storageBucket: 'farmtrack-ebd3b.firebasestorage.app',
+    storageBucket: 'farmtrack-ebd3b.appspot.com', 
   );
 
   static const FirebaseOptions android = FirebaseOptions(
@@ -54,7 +54,7 @@ class DefaultFirebaseOptions {
     appId: '1:1056152050367:android:f252d21de7f8e5574e840a',
     messagingSenderId: '1056152050367',
     projectId: 'farmtrack-ebd3b',
-    storageBucket: 'farmtrack-ebd3b.firebasestorage.app',
+    storageBucket: 'farmtrack-ebd3b.appspot.com', 
   );
 
   static const FirebaseOptions ios = FirebaseOptions(
@@ -62,7 +62,7 @@ class DefaultFirebaseOptions {
     appId: '1:1056152050367:ios:274bbae5cdd0a98f4e840a',
     messagingSenderId: '1056152050367',
     projectId: 'farmtrack-ebd3b',
-    storageBucket: 'farmtrack-ebd3b.firebasestorage.app',
+    storageBucket: 'farmtrack-ebd3b.appspot.com', 
     iosBundleId: 'com.example.farmtrack',
   );
 
@@ -71,7 +71,7 @@ class DefaultFirebaseOptions {
     appId: '1:1056152050367:ios:274bbae5cdd0a98f4e840a',
     messagingSenderId: '1056152050367',
     projectId: 'farmtrack-ebd3b',
-    storageBucket: 'farmtrack-ebd3b.firebasestorage.app',
+    storageBucket: 'farmtrack-ebd3b.appspot.com', 
     iosBundleId: 'com.example.farmtrack',
   );
 
@@ -81,7 +81,6 @@ class DefaultFirebaseOptions {
     messagingSenderId: '1056152050367',
     projectId: 'farmtrack-ebd3b',
     authDomain: 'farmtrack-ebd3b.firebaseapp.com',
-    storageBucket: 'farmtrack-ebd3b.firebasestorage.app',
+    storageBucket: 'farmtrack-ebd3b.appspot.com', 
   );
-
 }

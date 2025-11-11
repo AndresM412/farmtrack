@@ -10,9 +10,14 @@ dependencies:
   flutter:
     sdk: flutter
 
+  # 🔥 Firebase y otras dependencias
   firebase_core: ^3.5.0
   cloud_firestore: ^5.0.0
   firebase_auth: ^5.1.0
+  firebase_storage: ^12.1.0  # 📦 Para subir imágenes a Firebase Storage
+  image_picker: ^1.1.2       # 📷 Para seleccionar imágenes de la galería o cámara
+
+  # 👇 Otras librerías del proyecto
   provider: ^6.1.2
   material_design_icons_flutter: ^7.0.0
 

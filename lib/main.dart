@@ -4,7 +4,11 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'screens/login_screen.dart';
 import 'screens/register_screen.dart';
 import 'screens/home_screen.dart';
-import 'firebase_options.dart'; // si usaste el asistente de configuración de Firebase
+import 'screens/animals_screen.dart';
+import 'screens/add_animal_screen.dart';
+import 'firebase_options.dart'; 
+
+// si usaste el asistente de configuración de Firebase
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -32,6 +36,8 @@ class MyApp extends StatelessWidget {
         '/login': (context) => const LoginScreen(),
         '/register': (context) => const RegisterScreen(),
         '/home': (context) => const HomeScreen(),
+        '/animals': (context) => const AnimalsScreen(),
+        '/add_animal_screen': (context) => const AddAnimalScreen(),
       },
     );
   }
