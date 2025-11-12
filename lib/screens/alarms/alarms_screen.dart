@@ -229,16 +229,25 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
           );
         },
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(builder: (context) => const AddAlarmScreen()),
-          );
-        },
-        backgroundColor: const Color(0xFF3FD411),
-        foregroundColor: Colors.white,
-        child: const Icon(Icons.add),
+      floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
+      floatingActionButton: Padding(
+        padding: const EdgeInsets.only(bottom: 0),
+        child: Tooltip(
+          message: 'Agregar alarma',
+          child: FloatingActionButton(
+            backgroundColor: const Color(0xFF3FD411),
+            onPressed: () {
+              // Aquí va tu lógica de navegación
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const AddAlarmScreen(), // Ajusta según tu pantalla
+                ),
+              );
+            },
+            child: const Icon(Icons.add, color: Colors.white),
+          ),
+        ),
       ),
       bottomNavigationBar: const CustomBottomNav(currentIndex: 2),
     );

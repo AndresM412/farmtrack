@@ -49,12 +49,14 @@ class _EditAnimalScreenState extends State<EditAnimalScreen> {
     _nombreController.text = animal['nombre'] ?? '';
     _tipo = animal['tipo'] ?? 'Vaca';
     _razaController.text = animal['raza'] ?? '';
-    _fechaNacimientoController.text = animal['fechaNacimiento'] ?? '';
-    _inseminacionController.text = animal['inseminacion'] ?? '';
-    _partoController.text = animal['parto'] ?? '';
-    _lactanciaController.text = animal['lactancia'] ?? '';
+
+    _fechaNacimientoController.text = _formatTimestamp(animal['fechaNacimiento']);
+    _inseminacionController.text = _formatTimestamp(animal['inseminacion']);
+    _partoController.text = _formatTimestamp(animal['parto']);
+    _lactanciaController.text = _formatTimestamp(animal['lactancia']);
     _currentImageUrl = animal['imagenUrl'];
   }
+
 
   Future<void> _pickImage() async {
     try {
@@ -97,6 +99,19 @@ class _EditAnimalScreenState extends State<EditAnimalScreen> {
 
     final lactanciaDate = partoDate.add(const Duration(days: 60));
     _lactanciaController.text = "${lactanciaDate.day}/${lactanciaDate.month}/${lactanciaDate.year}";
+  }
+  
+  String _formatTimestamp(dynamic timestamp) {
+    if (timestamp == null) return '';
+
+    if (timestamp is Timestamp) {
+      final date = timestamp.toDate();
+      return "${date.day}/${date.month}/${date.year}";
+    } else if (timestamp is String) {
+      return timestamp;
+    } else {
+      return '';
+    }
   }
 
   Future<void> _updateAnimal() async {

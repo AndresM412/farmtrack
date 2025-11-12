@@ -185,7 +185,7 @@ class _AnimalsScreenState extends State<AnimalsScreen> {
 
       floatingActionButtonLocation: FloatingActionButtonLocation.endFloat,
       floatingActionButton: Padding(
-        padding: const EdgeInsets.only(bottom: 70.0),
+        padding: const EdgeInsets.only(bottom: 0),
         child: Tooltip(
           message: 'Agregar animal',
           child: FloatingActionButton(

@@ -155,7 +155,8 @@ class AnimalDetailScreen extends StatelessWidget {
             _buildInfoRow('Identificador', animal['nombre'] ?? 'No especificado'),
             _buildInfoRow('Especie', animal['tipo'] ?? 'No especificada'),
             _buildInfoRow('Raza', animal['raza'] ?? 'No especificada'),
-            _buildInfoRow('Fecha de Nacimiento', animal['fechaNacimiento'] ?? 'No especificada'),
+            _buildInfoRow('Fecha de Nacimiento', _formatTimestamp(animal['fechaNacimiento'])),
+
 
             if (animal['fechaRegistro'] != null) ...[
               const SizedBox(height: 8),
@@ -303,51 +304,56 @@ class AnimalDetailScreen extends StatelessWidget {
     );
   }
 
-  Widget _buildReproductiveEvent(String title, IconData icon, String? date) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF3FD411).withOpacity(0.05),
-        borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: const Color(0xFF3FD411).withOpacity(0.2)),
-      ),
-      child: Row(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(8),
-            decoration: BoxDecoration(
-              color: const Color(0xFF3FD411).withOpacity(0.1),
-              shape: BoxShape.circle,
-            ),
-            child: Icon(icon, color: const Color(0xFF3FD411), size: 20),
+Widget _buildReproductiveEvent(String title, IconData icon, dynamic date) {
+  String formattedDate = _formatTimestamp(date);
+
+  return Container(
+    padding: const EdgeInsets.all(12),
+    decoration: BoxDecoration(
+      color: const Color(0xFF3FD411).withOpacity(0.05),
+      borderRadius: BorderRadius.circular(12),
+      border: Border.all(color: const Color(0xFF3FD411).withOpacity(0.2)),
+    ),
+    child: Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF3FD411).withOpacity(0.1),
+            shape: BoxShape.circle,
           ),
-          const SizedBox(width: 12),
-          Expanded(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                  title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.w600,
-                    color: Colors.black,
-                  ),
+          child: Icon(icon, color: const Color(0xFF3FD411), size: 20),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                title,
+                style: const TextStyle(
+                  fontWeight: FontWeight.w600,
+                  color: Colors.black,
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  date ?? 'No programado',
-                  style: TextStyle(
-                    color: date != null ? const Color(0xFF3FD411) : Colors.grey,
-                    fontWeight: FontWeight.w500,
-                  ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                formattedDate != 'Fecha no disponible' ? formattedDate : 'No programado',
+                style: TextStyle(
+                  color: formattedDate != 'Fecha no disponible'
+                      ? const Color(0xFF3FD411)
+                      : Colors.grey,
+                  fontWeight: FontWeight.w500,
                 ),
-              ],
-            ),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
-  }
+        ),
+      ],
+    ),
+  );
+}
+
 
   Color _getStatusColor(Map<String, dynamic> animal) {
     if (animal['lactancia'] != null) {
@@ -373,17 +379,25 @@ class AnimalDetailScreen extends StatelessWidget {
     }
   }
 
-  String _formatTimestamp(dynamic timestamp) {
-    try {
-      if (timestamp is Timestamp) {
-        final date = timestamp.toDate();
-        return '${date.day}/${date.month}/${date.year}';
-      }
-      return timestamp.toString();
-    } catch (e) {
-      return 'Fecha no disponible';
+String _formatTimestamp(dynamic timestamp) {
+  try {
+    if (timestamp == null) return 'No programado';
+    if (timestamp is Timestamp) {
+      final date = timestamp.toDate();
+      return '${date.day.toString().padLeft(2, '0')}/${date.month.toString().padLeft(2, '0')}/${date.year}';
     }
+    if (timestamp is DateTime) {
+      return '${timestamp.day.toString().padLeft(2, '0')}/${timestamp.month.toString().padLeft(2, '0')}/${timestamp.year}';
+    }
+    if (timestamp is String) {
+      return timestamp;
+    }
+    return 'Fecha no disponible';
+  } catch (e) {
+    return 'Fecha no disponible';
   }
+}
+
 
   void _showDeleteConfirmation(BuildContext context, String animalId) {
     showDialog(
