@@ -60,4 +60,21 @@ class Alarm {
         alarmDateTime.month == tomorrow.month &&
         alarmDateTime.day == tomorrow.day;
   }
+    Alarm copyWith({
+    String? id,
+    String? title,
+    String? description,
+    DateTime? alarmDateTime,
+    bool? isActive,
+    DateTime? createdAt,
+  }) {
+    return Alarm(
+      id: id ?? this.id,
+      title: title ?? this.title,
+      description: description ?? this.description,
+      alarmDateTime: alarmDateTime ?? this.alarmDateTime,
+      isActive: isActive ?? this.isActive,
+      createdAt: createdAt ?? this.createdAt,
+    );
+  }
 }

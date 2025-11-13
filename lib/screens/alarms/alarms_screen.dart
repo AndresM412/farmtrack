@@ -5,6 +5,9 @@ import '../../services/alarm_service.dart';
 import '../../widgets/alarm_dialog.dart';
 import '../../widgets/custom_bottom_nav.dart';
 import 'add_alarm_screen.dart';
+import 'alarm_detail_screen.dart'; 
+
+
 
 class AlarmsScreen extends StatefulWidget {
   const AlarmsScreen({super.key});
@@ -130,6 +133,14 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
           },
           activeColor: const Color(0xFF3FD411),
         ),
+        onTap: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => AlarmDetailScreen(alarm: alarm), // Ajusta según tu pantalla
+            ),
+          );
+        },      
         onLongPress: () {
           _showDeleteDialog(alarm);
         },
@@ -237,7 +248,6 @@ class _AlarmsScreenState extends State<AlarmsScreen> {
           child: FloatingActionButton(
             backgroundColor: const Color(0xFF3FD411),
             onPressed: () {
-              // Aquí va tu lógica de navegación
               Navigator.push(
                 context,
                 MaterialPageRoute(

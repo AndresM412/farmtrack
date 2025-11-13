@@ -2,9 +2,78 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import '../widgets/custom_bottom_nav.dart';
+import 'login_screen.dart'; // 👈 Asegúrate de importar tu pantalla de login
 
 class HomeScreen extends StatelessWidget {
   const HomeScreen({super.key});
+
+  // 🔒 Función para mostrar el diálogo de confirmación
+  void _mostrarConfirmacionLogout(BuildContext context) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text(
+            'Cerrar sesión',
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
+          content: const Text(
+            '¿Estás seguro de que deseas cerrar sesión?',
+            style: TextStyle(color: Colors.black87),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancelar', style: TextStyle(color: Colors.grey)),
+            ),
+            TextButton(
+              onPressed: () async {
+                Navigator.of(context).pop(); // Cierra el diálogo
+                await _cerrarSesion(context);
+              },
+              child: const Text(
+                'Cerrar sesión',
+                style: TextStyle(color: Colors.red, fontWeight: FontWeight.bold),
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  // 🚪 Cierre de sesión con Firebase
+  Future<void> _cerrarSesion(BuildContext context) async {
+    try {
+      await FirebaseAuth.instance.signOut();
+
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Sesión cerrada exitosamente'),
+            backgroundColor: Colors.green,
+            duration: Duration(seconds: 2),
+          ),
+        );
+
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => const LoginScreen()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text('Error al cerrar sesión: $e'),
+            backgroundColor: Colors.red,
+          ),
+        );
+      }
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -12,6 +81,25 @@ class HomeScreen extends StatelessWidget {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF6F8F6),
+      appBar: AppBar(
+        backgroundColor: const Color(0xFFF6F8F6),
+        elevation: 0,
+        centerTitle: true,
+        title: const Text(
+          "Inicio",
+          style: TextStyle(
+            color: Colors.black,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        actions: [
+          IconButton(
+            tooltip: "Cerrar sesión",
+            icon: const Icon(Icons.logout, color: Colors.red),
+            onPressed: () => _mostrarConfirmacionLogout(context),
+          ),
+        ],
+      ),
       body: SafeArea(
         child: StreamBuilder<DocumentSnapshot>(
           stream: FirebaseFirestore.instance
@@ -33,16 +121,17 @@ class HomeScreen extends StatelessWidget {
             final proximosPartos = data['proximosPartos'] ?? 0;
             final nombreFinca = data['nombreFinca'] ?? "Finca";
 
-            // imágenes
-              final img1 = "https://plus.unsplash.com/premium_photo-1663045932351-267ae867e880?fm=jpg&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MXx8YW5pbWFsJTIwZmFybXxlbnwwfHwwfHx8MA%3D%3D&ixlib=rb-4.1.0&q=60&w=3000";
-              final img2 = "https://www.morningagclips.com/wp-content/uploads/2020/07/monika-kubala-OpMfiq8nPI0-unsplash-720x400.jpg";
-              final img3 = "https://plus.unsplash.com/premium_photo-1677575242377-5e04cd0b5614?fm=jpg&ixid=M3wxMjA3fDB8MHxzZWFyY2h8NXx8Y293JTIwYW5kJTIwY2FsZnxlbnwwfHwwfHx8MA%3D%3D&ixlib=rb-4.1.0&q=60&w=3000";
-              final img4 = "https://images.unsplash.com/photo-1665936091620-bc6c8bec50e3?fm=jpg&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTZ8fGJhYnklMjBjb3dzfGVufDB8fDB8fHww&ixlib=rb-4.1.0&q=60&w=3000";
-// próximos partos
+            final img1 =
+                "https://plus.unsplash.com/premium_photo-1663045932351-267ae867e880?fm=jpg&q=60&w=3000";
+            final img2 =
+                "https://www.morningagclips.com/wp-content/uploads/2020/07/monika-kubala-OpMfiq8nPI0-unsplash-720x400.jpg";
+            final img3 =
+                "https://plus.unsplash.com/premium_photo-1677575242377-5e04cd0b5614?fm=jpg&q=60&w=3000";
+            final img4 =
+                "https://images.unsplash.com/photo-1665936091620-bc6c8bec50e3?fm=jpg&q=60&w=3000";
 
             return Column(
               children: [
-                // Título pantalla
                 Padding(
                   padding: const EdgeInsets.symmetric(vertical: 14),
                   child: Center(
@@ -55,7 +144,6 @@ class HomeScreen extends StatelessWidget {
                     ),
                   ),
                 ),
-
                 Expanded(
                   child: SingleChildScrollView(
                     padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
@@ -68,29 +156,23 @@ class HomeScreen extends StatelessWidget {
                               fontSize: 22, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 16),
-
                         _cardInfo("Total de Animales", totalAnimales, img1),
                         _cardInfo("Animales en Gestación", gestacion, img2),
                         _cardInfo("Animales en Lactancia", lactancia, img3),
                         _cardInfo("Próximos Partos", proximosPartos, img4),
-
                         const SizedBox(height: 24),
-
                         const Text(
                           "Alertas Recientes",
                           style: TextStyle(
                               fontSize: 22, fontWeight: FontWeight.bold),
                         ),
                         const SizedBox(height: 16),
-
                         _alertItem("Confirmar gestación", "Vaca #123"),
                         _alertItem("Inseminación pendiente", "Cerda #456"),
                       ],
                     ),
                   ),
                 ),
-
-                // ✅ barra inferior global
                 const CustomBottomNav(currentIndex: 0),
               ],
             );
